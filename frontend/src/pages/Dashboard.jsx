@@ -1,39 +1,56 @@
+// src/pages/Dashboard.jsx
 import { useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import Button from "../components/Button";
 import "./Dashboard.css";
 
-/* ---------------- helpers ---------------- */
-function getUser() {
-  const raw = localStorage.getItem("demo_user");
-  return raw ? JSON.parse(raw) : null;
-}
-function setUser(u) { localStorage.setItem("demo_user", JSON.stringify(u)); }
+/* ---------------- API ---------------- */
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+const authHeader = () => {
+  const token = localStorage.getItem("access");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
-function getGlobal() {
-  const raw = localStorage.getItem("global_stats");
-  return raw ? JSON.parse(raw) : { totalUses: 0, totalPoints: 0 };
+async function apiGet(path, { auth = false } = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "Content-Type": "application/json", ...(auth ? authHeader() : {}) },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
-function setGlobal(g) { localStorage.setItem("global_stats", JSON.stringify(g)); }
 
-function getGlobalDaily() {
-  const raw = localStorage.getItem("global_uses_by_date");
-  return raw ? JSON.parse(raw) : {};
+async function apiPost(path, body, { auth = false } = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(auth ? authHeader() : {}) },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json().catch(() => ({}));
 }
-function setGlobalDaily(map) { localStorage.setItem("global_uses_by_date", JSON.stringify(map)); }
 
+/* ---------------- helpers (로컬 상태) ---------------- */
 function nowStr() {
   const d = new Date();
-  const pad = (n) => n.toString().padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const pad = (n) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
 }
 const todayKey = () => {
   const d = new Date();
-  const pad = (n) => n.toString().padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const pad = (n) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
-const dailyKeyFor = (user) => `uses_by_date_${user?.name || "guest"}`;
-const redemptionsKeyFor = (user) => `redemptions_${user?.name || "guest"}`;
+// 이름 우선 → 없으면 이메일 → 없으면 "me"
+const username = () =>
+  localStorage.getItem("current_user_name") ||
+  localStorage.getItem("current_user") ||
+  "me";
+
+const dailyKeyFor = (u) => `uses_by_date_${u}`;
+const redemptionsKeyFor = (u) => `redemptions_${u}`;
+const pointsKeyFor = (u) => `points_${u}`; // 포인트 임시 로컬 보관(서버 모델 생기면 교체)
 
 /* ---------------- domain: 카페 & 리워드 ---------------- */
 const CAFES = [
@@ -50,39 +67,35 @@ const CAFES = [
 ];
 
 const REWARDS = [
-  { id:"bronze", tier:"Bronze", cost:40,  title:"10% OFF 쿠폰", type:"coupon" },
-  { id:"silver", tier:"Silver", cost:80,  title:"사이즈업 쿠폰", type:"coupon" },
-  { id:"gold",   tier:"Gold",   cost:120, title:"₩1,000 할인", type:"coupon" },
+  { id: "bronze", tier: "Bronze", cost: 40, title: "10% OFF 쿠폰", type: "coupon" },
+  { id: "silver", tier: "Silver", cost: 80, title: "사이즈업 쿠폰", type: "coupon" },
+  { id: "gold", tier: "Gold", cost: 120, title: "₩1,000 할인", type: "coupon" },
 ];
 
-/* ===== 조정 가능한 상수 ===== */
-const PERSONAL_PER_TREE = 10;   // 개인: 10회 = 1그루
-const COMMUNITY_PER_TREE = 30;  // 커뮤니티: 30회 = 1그루
+/* ===== 상수 ===== */
+const PERSONAL_PER_TREE = 10; // 개인: 10회 = 1그루
+const COMMUNITY_PER_TREE = 30; // 커뮤니티: 30회 = 1그루
 const REWARD_EXPIRE_HOURS = 48;
 
-function clampPct(n) { return Math.max(0, Math.min(100, Math.round(n))); }
+function clampPct(n) {
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
 
-/* ================= ForestField =================
-  넓은 잔디 배경에 작은 나무(🌳)를 “그루 수”만큼 렌더링합니다.
-  - trees: 그루 수(=이모지 개수)
-  - cap: 렌더 상한 (초과분은 +N으로 표시)
-  - size: 이모지 크기(px)
-*/
+/* ================= ForestField ================= */
 function ForestField({ trees = 0, cap = 300, size = 18, label, variant = "light" }) {
   const count = Math.min(trees, cap);
   const overflow = Math.max(0, trees - cap);
-
   return (
     <div className={`field-wrap ${variant}`} aria-label={label || "forest"}>
       <div className="field-grass">
         <div className="field-grid" style={{ fontSize: `${size}px` }}>
           {Array.from({ length: count }).map((_, i) => (
-            <span className="tree" key={i} role="img" aria-label="tree">🌳</span>
+            <span className="tree" key={i} role="img" aria-label="tree">
+              🌳
+            </span>
           ))}
         </div>
-        {overflow > 0 && (
-          <div className="field-overflow">+{overflow}</div>
-        )}
+        {overflow > 0 && <div className="field-overflow">+{overflow}</div>}
       </div>
     </div>
   );
@@ -90,12 +103,20 @@ function ForestField({ trees = 0, cap = 300, size = 18, label, variant = "light"
 
 /* ---------------- main component ---------------- */
 export default function Dashboard({ bin }) {
-  const [user, setUserState] = useState(getUser());
-  const [global, setGlobalState] = useState(getGlobal());
-  const [globalDaily, setGlobalDailyState] = useState(getGlobalDaily());
+  const userName = username();
 
+  // 서버 동기화 값
+  const [myTotal, setMyTotal] = useState(0); // /api/trees/me/ → { total }
+  const [globalTrees, setGlobalTrees] = useState(0); // /api/trees/global/ → { total_trees }
+
+  // 로컬 보조 상태 (UX용)
   const [todayUses, setTodayUses] = useState(0);
+  const [points, setPoints] = useState(() => Number(localStorage.getItem(pointsKeyFor(userName)) || 0));
   const [range, setRange] = useState("day"); // day/week/month
+  const [globalDaily, setGlobalDaily] = useState(() => {
+    const raw = localStorage.getItem("global_uses_by_date");
+    return raw ? JSON.parse(raw) : {};
+  });
 
   // URL cafe param
   const [cafeParam, setCafeParam] = useState(null);
@@ -105,118 +126,141 @@ export default function Dashboard({ bin }) {
     if (cafe) setCafeParam(cafe);
   }, []);
 
-  // daily counts
+  // 오늘 내 사용 로드
   useEffect(() => {
-    if (!user) return;
-    const mapRaw = localStorage.getItem(dailyKeyFor(user));
+    const mapRaw = localStorage.getItem(dailyKeyFor(userName));
     const map = mapRaw ? JSON.parse(mapRaw) : {};
     setTodayUses(map[todayKey()] || 0);
-  }, [user]);
+  }, [userName]);
 
+  // 서버에서 합계 로드
+  async function fetchTotals() {
+    try {
+      const [mine, global] = await Promise.all([
+        apiGet("/api/trees/me/", { auth: true }),
+        apiGet("/api/trees/global/"),
+      ]);
+      setMyTotal(mine.total || 0);
+      setGlobalTrees(global.total_trees || 0);
+    } catch (e) {
+      // 토큰 만료 등은 상위 라우터(RequireAuth)에서 처리
+      console.error("fetchTotals error:", e);
+    }
+  }
   useEffect(() => {
-    const gd = getGlobalDaily();
-    setGlobalDailyState(gd);
+    fetchTotals();
   }, []);
 
-  // redemptions
+  // 쿠폰함(로컬)
   const [redeems, setRedeems] = useState(() => {
-    const raw = localStorage.getItem(redemptionsKeyFor(user));
+    const raw = localStorage.getItem(redemptionsKeyFor(userName));
     return raw ? JSON.parse(raw) : [];
   });
   useEffect(() => {
-    localStorage.setItem(redemptionsKeyFor(user), JSON.stringify(redeems));
-  }, [redeems, user]);
+    localStorage.setItem(redemptionsKeyFor(userName), JSON.stringify(redeems));
+  }, [redeems, userName]);
+
   useEffect(() => {
     const t = setInterval(() => {
-      setRedeems((prev) => prev.map(r => (r.status === "issued" && Date.now() > r.expireAt) ? { ...r, status: "expired" } : r));
+      setRedeems((prev) =>
+        prev.map((r) => (r.status === "issued" && Date.now() > r.expireAt ? { ...r, status: "expired" } : r))
+      );
     }, 1000);
     return () => clearInterval(t);
   }, []);
 
-  /* --------- 핵심 수치 계산 --------- */
-  // “그루 수” 계산
-  const treesPersonal = useMemo(
-    () => Math.floor((user?.uses || 0) / PERSONAL_PER_TREE),
-    [user]
-  );
-  const treesCommunity = useMemo(
-    () => Math.floor(global.totalUses / COMMUNITY_PER_TREE),
-    [global.totalUses]
-  );
-
-  // 다음 그루까지 진행도
-  const personalMod = (user?.uses || 0) % PERSONAL_PER_TREE;
+  /* --------- 계산값 --------- */
+  const treesPersonal = useMemo(() => Math.floor(myTotal / PERSONAL_PER_TREE), [myTotal]);
+  const personalMod = myTotal % PERSONAL_PER_TREE;
   const personalPct = clampPct((personalMod / PERSONAL_PER_TREE) * 100);
-  const communityMod = global.totalUses % COMMUNITY_PER_TREE;
-  const communityPct = clampPct((communityMod / COMMUNITY_PER_TREE) * 100);
 
-  // 기간 합계 (커뮤니티)
+  // 서버가 "전체 사용 횟수"는 제공하지 않으므로, 전체 그루 수만 표시
+  const treesCommunity = globalTrees;
+
+  // 기간 합계(커뮤니티) — 지금은 로컬 집계(우리 앱에서 기록된 것만)
   const communityRangeSum = useMemo(() => {
-    const today = new Date(todayKey());
+    const base = new Date(todayKey());
     const days = range === "day" ? 1 : range === "week" ? 7 : 30;
     let sum = 0;
     for (let i = 0; i < days; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const key = d.toISOString().slice(0,10);
+      const d = new Date(base);
+      d.setDate(base.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
       sum += globalDaily[key] || 0;
     }
     return sum;
   }, [globalDaily, range]);
 
-  // ✅ 내가 오늘 올린 ‘우리의 숲’ 성장 기여도(%) = 오늘 내 사용 / 커뮤니티 1그루 기준
+  // 내가 오늘 커뮤니티 1그루 기준으로 얼마나 기여했는지(로컬 기준)
   const communityContributionPct = clampPct((todayUses / COMMUNITY_PER_TREE) * 100);
 
-  /* -------- 쓰레기통 사용 -------- */
-  const useOnceWithCafe = (cafeId) => {
-    if (!user) { window.location.href = "/signup"; return; }
+  /* -------- 쓰레기통 사용(서버 동기화) -------- */
+  const useOnceWithCafe = async (cafeId) => {
+    const token = localStorage.getItem("access");
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
 
-    // 1) 개인 적립
-    let newUser = { ...user, uses: user.uses + 1, points: user.points + 4 };
+    try {
+      // 1) 서버에 이벤트 기록
+      await apiPost("/api/trees/add/", { delta: 1, reason: cafeId ? `use:${cafeId}` : "use" }, { auth: true });
 
-    // 2) 카페 스탬프 (옵션)
-    const stamps = { ...(newUser.stamps || {}) };
-    if (cafeId) stamps[cafeId] = (stamps[cafeId] || 0) + 1;
-    newUser.stamps = stamps;
+      // 2) 일일 로컬 로그 갱신(UX용)
+      const tk = todayKey();
+      const userKey = dailyKeyFor(userName);
+      const raw = localStorage.getItem(userKey);
+      const map = raw ? JSON.parse(raw) : {};
+      map[tk] = (map[tk] || 0) + 1;
+      localStorage.setItem(userKey, JSON.stringify(map));
+      setTodayUses(map[tk]);
 
-    // 3) 저장(개인/전체)
-    setUser(newUser); setUserState(newUser);
-    const newGlobal = { totalUses: global.totalUses + 1, totalPoints: global.totalPoints + 4 };
-    setGlobal(newGlobal); setGlobalState(newGlobal);
+      // 3) 글로벌 일일 로그(UX용)
+      const graw = localStorage.getItem("global_uses_by_date");
+      const gmap = graw ? JSON.parse(graw) : {};
+      gmap[tk] = (gmap[tk] || 0) + 1;
+      localStorage.setItem("global_uses_by_date", JSON.stringify(gmap));
+      setGlobalDaily(gmap);
 
-    // 4) 개인/전체 일일 로그
-    const tk = todayKey();
+      // 4) 포인트(임시 로컬) +4p
+      const newPts = points + 4;
+      setPoints(newPts);
+      localStorage.setItem(pointsKeyFor(userName), String(newPts));
 
-    const k = dailyKeyFor(newUser);
-    const raw = localStorage.getItem(k);
-    const map = raw ? JSON.parse(raw) : {};
-    map[tk] = (map[tk] || 0) + 1;
-    localStorage.setItem(k, JSON.stringify(map));
-    setTodayUses(map[tk]);
+      // 5) 서버 합계 재조회
+      await fetchTotals();
 
-    const gmap = getGlobalDaily();
-    gmap[tk] = (gmap[tk] || 0) + 1;
-    setGlobalDaily(gmap);
-    setGlobalDailyState(gmap);
+      // 6) 트랜잭션 저장(그대로 유지)
+      const txn = {
+        time: nowStr(),
+        bin: bin || "BIN-001",
+        pointsGained: 4,
+        userName,
+        cafeId: cafeId || null,
+      };
+      sessionStorage.setItem("last_txn", JSON.stringify(txn));
 
-    // 5) 트랜잭션
-    const txn = { time: nowStr(), bin: bin || "BIN-001", pointsGained: 4, userName: newUser.name, cafeId: cafeId || null };
-    sessionStorage.setItem("last_txn", JSON.stringify(txn));
-
-    // 6) 유효성 페이지로 이동
-    window.location.href = "/validating";
+      // 7) 유효성 페이지로 이동
+      window.location.href = "/validating";
+    } catch (e) {
+      alert("사용 기록에 실패했습니다. 다시 시도해 주세요.");
+      console.error(e);
+    }
   };
 
   const useOnce = () => useOnceWithCafe(cafeParam || null);
 
-  /* -------- 리워드 -------- */
+  /* -------- 리워드(로컬) -------- */
   function redeemReward(reward) {
-    if (!user) return;
-    if (user.points < reward.cost) { alert("포인트가 부족해요."); return; }
+    if (!userName) return;
+    if (points < reward.cost) {
+      alert("포인트가 부족해요.");
+      return;
+    }
     const code = Math.random().toString(36).slice(2, 8).toUpperCase();
     const entry = {
       id: `red_${Date.now()}`,
-      userId: user.id || user.name || "me",
+      userId: userName,
       cafeId: reward.cafeId,
       cafeName: reward.cafeName,
       rewardId: reward.id,
@@ -226,13 +270,14 @@ export default function Dashboard({ bin }) {
       issuedAt: nowStr(),
       expireAt: Date.now() + REWARD_EXPIRE_HOURS * 60 * 60 * 1000,
     };
-    const newUser = { ...user, points: user.points - reward.cost };
-    setUser(newUser); setUserState(newUser);
+    const newPts = points - reward.cost;
+    setPoints(newPts);
+    localStorage.setItem(pointsKeyFor(userName), String(newPts));
     setRedeems((prev) => [entry, ...prev]);
     alert(`교환 완료!\n코드: ${code}\n${REWARD_EXPIRE_HOURS}시간 내 사용하세요.`);
   }
-  const markRedeemed = (id) => setRedeems(prev => prev.map(r => r.id === id ? { ...r, status: "redeemed" } : r));
-  const deleteRedeem = (id) => setRedeems(prev => prev.filter(r => r.id !== id));
+  const markRedeemed = (id) => setRedeems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "redeemed" } : r)));
+  const deleteRedeem = (id) => setRedeems((prev) => prev.filter((r) => r.id !== id));
 
   /* ---------------- render ---------------- */
   return (
@@ -242,30 +287,30 @@ export default function Dashboard({ bin }) {
         <section className="dashboard-section">
           <div className="section-title-wrapper">
             <h2 className="section-title">
-              {user
-                ? (
-                  <>
-                    {user.name}님,<br />
-                    오늘도 한 그루 심어볼까요? 🌱
-                  </>
-                )
-                : "로그인이 필요합니다"}
+              {userName ? (
+                <>
+                  {userName}님,<br />
+                  오늘도 한 그루 심어볼까요? 🌱
+                </>
+              ) : (
+                "로그인이 필요합니다"
+              )}
             </h2>
 
-            {/* ✅ 상단에 ‘나의 사용/포인트’ 칩 배치 */}
+            {/* 상단 ‘나의 사용/포인트’ */}
             <div className="title-stats" aria-label="내 정보 요약">
               <div className="stat-chip">
                 <span className="chip-label">나의 사용 횟수</span>
-                <span className="chip-value">{user?.uses ?? 0}</span>
+                <span className="chip-value">{myTotal}</span>
               </div>
               <div className="stat-chip">
                 <span className="chip-label">나의 포인트</span>
-                <span className="chip-value">{user?.points ?? 0}</span>
+                <span className="chip-value">{points}</span>
               </div>
             </div>
 
             <p className="section-sub">
-              {user ? (
+              {userName ? (
                 <>
                   쓰레기통을 사용할 때마다 +4p,<br />
                   우리의 숲이 더 푸르게 자라요.
@@ -279,7 +324,7 @@ export default function Dashboard({ bin }) {
             </p>
           </div>
 
-          {/* 숲 시각화 — 개인(라이트) */}
+          {/* 숲 시각화 — 개인 */}
           <div className="forest-visual-container">
             <div className="forest-card forest-personal">
               <div className="forest-header">
@@ -287,11 +332,7 @@ export default function Dashboard({ bin }) {
                 <span className="forest-chip personal">다음 나무까지 {personalPct}%</span>
               </div>
 
-              <ForestField
-                trees={treesPersonal}
-                label="나의 숲"
-                variant="light"
-              />
+              <ForestField trees={treesPersonal} label="나의 숲" variant="light" />
 
               <div className="forest-stats">
                 <div className="forest-metrics">
@@ -307,31 +348,31 @@ export default function Dashboard({ bin }) {
                 <div className="progress">
                   <div className="progress-label">
                     <span>다음 나무까지</span>
-                    <span>{(user?.uses || 0) % PERSONAL_PER_TREE}/{PERSONAL_PER_TREE}</span>
+                    <span>
+                      {myTotal % PERSONAL_PER_TREE}/{PERSONAL_PER_TREE}
+                    </span>
                   </div>
-                  <div className="progress-track"><div className="progress-fill" style={{ width: `${personalPct}%` }} /></div>
+                  <div className="progress-track">
+                    <div className="progress-fill" style={{ width: `${personalPct}%` }} />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 숲 시각화 — 커뮤니티(다크) */}
+            {/* 숲 시각화 — 커뮤니티 */}
             <div className="forest-card forest-global">
               <div className="forest-header">
                 <h3 className="forest-title global">우리의 숲</h3>
                 <div className="tabs" role="tablist" aria-label="기간 선택">
-                  {["day","week","month"].map(k => (
-                    <button key={k} className={`tab-btn ${range===k?"active":""}`} onClick={()=>setRange(k)}>
-                      {k==="day"?"Day":k==="week"?"Week":"Month"}
+                  {["day", "week", "month"].map((k) => (
+                    <button key={k} className={`tab-btn ${range === k ? "active" : ""}`} onClick={() => setRange(k)}>
+                      {k === "day" ? "Day" : k === "week" ? "Week" : "Month"}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <ForestField
-                trees={treesCommunity}
-                label="우리 모두의 숲"
-                variant="dark"
-              />
+              <ForestField trees={treesCommunity} label="우리 모두의 숲" variant="dark" />
 
               <div className="forest-stats">
                 <div className="forest-metrics">
@@ -341,32 +382,37 @@ export default function Dashboard({ bin }) {
                   </div>
                   <div className="metric metric-on-dark">
                     <div className="metric-label">
-                      {range==="day"?"오늘 재활용된 컵":range==="week"?"최근 7일": "최근 30일"}
+                      {range === "day"
+                        ? "오늘 재활용된 컵(앱 기록)"
+                        : range === "week"
+                        ? "최근 7일(앱 기록)"
+                        : "최근 30일(앱 기록)"}
                     </div>
                     <div className="metric-value">{communityRangeSum}</div>
                   </div>
                 </div>
 
-                <div className="progress progress-on-dark">
-                  <div className="progress-label">
-                    <span>다음 나무까지</span>
-                    <span>{global.totalUses % COMMUNITY_PER_TREE}/{COMMUNITY_PER_TREE}</span>
-                  </div>
-                  <div className="progress-track"><div className="progress-fill" style={{ width: `${communityPct}%` }} /></div>
-                </div>
+                {/* 전체 사용 누계(모든 사용자)의 진행률은 서버가 '전체 사용 횟수'를 안 주므로 표시 생략 */}
               </div>
             </div>
           </div>
 
-          {/* 내가 ‘우리의 숲’에 기여한 성장도 문구 */}
+          {/* 내가 ‘우리의 숲’에 기여한 성장도 문구 (앱 로컬 기준) */}
           <div className="daily-log">
-            {user
-              ? <>오늘 <b className="highlight-brand">{todayUses}</b>회 사용으로 <b className="highlight-brand">우리의 숲</b>이 <b className="highlight-brand">+{communityContributionPct}%</b> 성장했어요. <br />한 그루, 또 한 그루 함께 심어요!</>
-              : <>로그인하여 숲을 함께 키워보아요.</>}
+            {userName ? (
+              <>
+                오늘 <b className="highlight-brand">{todayUses}</b>회 사용으로{" "}
+                <b className="highlight-brand">우리의 숲</b>이{" "}
+                <b className="highlight-brand">+{communityContributionPct}%</b> 성장했어요. <br />
+                한 그루, 또 한 그루 함께 심어요!
+              </>
+            ) : (
+              <>로그인하여 숲을 함께 키워보아요.</>
+            )}
           </div>
 
           {/* 제휴 리워드 */}
-          <RewardList user={user} onRedeem={redeemReward} />
+          <RewardList points={points} onRedeem={reclaimSafe(redeemReward)} />
 
           {/* 내 쿠폰함 */}
           <CouponBox items={redeems} onUse={markRedeemed} onDelete={deleteRedeem} />
@@ -374,32 +420,50 @@ export default function Dashboard({ bin }) {
           {/* CTA */}
           <div className="cta-buttons">
             <Button onClick={useOnce}>
-              {user ? (cafeParam ? `쓰레기통 사용하기 (+1) · ${CAFES.find(c => c.id === cafeParam)?.name || cafeParam}` : "쓰레기통 사용하기 (+1)") : "로그인/가입 후 이용"}
+              {userName
+                ? cafeParam
+                  ? `쓰레기통 사용하기 (+1) · ${CAFES.find((c) => c.id === cafeParam)?.name || cafeParam}`
+                  : "쓰레기통 사용하기 (+1)"
+                : "로그인/가입 후 이용"}
             </Button>
-            <Button variant="outline" onClick={()=>{
-              if (window.confirm("데모 데이터를 초기화할까요?")) {
-                localStorage.removeItem("demo_user");
-                localStorage.removeItem("global_stats");
-                localStorage.removeItem("global_uses_by_date");
-                sessionStorage.removeItem("last_txn");
-                if (user) {
-                  localStorage.removeItem(dailyKeyFor(user));
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (window.confirm("로컬 대시보드 데이터를 초기화할까요? (서버 데이터는 유지)")) {
+                  // 로컬 UX 데이터만 초기화(서버 누적은 그대로 유지)
+                  localStorage.removeItem("global_uses_by_date");
+                  sessionStorage.removeItem("last_txn");
+                  localStorage.removeItem(dailyKeyFor(userName));
+                  localStorage.removeItem(redemptionsKeyFor(userName));
+                  localStorage.removeItem(pointsKeyFor(userName));
+                  setGlobalDaily({});
+                  setRedeems([]);
+                  setTodayUses(0);
+                  setPoints(0);
+                  alert("로컬 데이터 초기화 완료");
                 }
-                localStorage.removeItem(redemptionsKeyFor(user));
-                setUserState(null);
-                setGlobalState({ totalUses: 0, totalPoints: 0 });
-                setGlobalDailyState({});
-                setRedeems([]);
-                setTodayUses(0);
-                alert("초기화 완료");
-              }
-            }}>데모 데이터 초기화</Button>
+              }}
+            >
+              로컬 데이터 초기화
+            </Button>
           </div>
 
           {(bin || cafeParam) && (
             <div className="bin-info">
-              {bin && <>현재 QR 쓰레기통 ID: <strong className="highlight-brand">{bin}</strong></>}
-              {cafeParam && <><br/>제휴 카페: <strong className="highlight-brand">{CAFES.find(c=>c.id===cafeParam)?.name || cafeParam}</strong></>}
+              {bin && (
+                <>
+                  현재 QR 쓰레기통 ID: <strong className="highlight-brand">{bin}</strong>
+                </>
+              )}
+              {cafeParam && (
+                <>
+                  <br />
+                  제휴 카페:{" "}
+                  <strong className="highlight-brand">
+                    {CAFES.find((c) => c.id === cafeParam)?.name || cafeParam}
+                  </strong>
+                </>
+              )}
             </div>
           )}
         </section>
@@ -409,23 +473,24 @@ export default function Dashboard({ bin }) {
 }
 
 /* -------- 하위 컴포넌트 -------- */
-function RewardList({ user, onRedeem }) {
-  const userPoints = user?.points ?? 0;
-  const partners = CAFES.filter(c => c.partner);
+function RewardList({ points, onRedeem }) {
+  const partners = CAFES.filter((c) => c.partner);
   return (
     <div className="reward-list">
       <div className="list-head">
         <h3>제휴 카페 리워드</h3>
-        <span className="my-points">보유 포인트: <b>{userPoints}</b>p</span>
+        <span className="my-points">
+          보유 포인트: <b>{points}</b>p
+        </span>
       </div>
 
       <div className="partner-scroller">
-        {partners.map(cafe => (
+        {partners.map((cafe) => (
           <div key={cafe.id} className="partner-card">
             <div className="partner-title">{cafe.name}</div>
             <ul className="reward-badges">
-              {REWARDS.map(r => {
-                const can = userPoints >= r.cost;
+              {REWARDS.map((r) => {
+                const can = points >= r.cost;
                 return (
                   <li key={`${cafe.id}-${r.id}`} className={`badge ${can ? "can" : "cannot"}`}>
                     <button
@@ -435,7 +500,9 @@ function RewardList({ user, onRedeem }) {
                       title={can ? `${r.title} 교환하기` : "포인트가 부족합니다"}
                       aria-label={`${r.tier} (${r.cost}p) - ${r.title}${can ? "" : " (포인트 부족)"}`}
                     >
-                      <span className="badge-top">{r.tier} · {r.cost}p</span>
+                      <span className="badge-top">
+                        {r.tier} · {r.cost}p
+                      </span>
                       <span className="badge-sub">{r.title}</span>
                     </button>
                   </li>
@@ -458,7 +525,7 @@ function CouponBox({ items, onUse, onDelete }) {
         <span className="sub-hint">만료까지 최대 {REWARD_EXPIRE_HOURS}시간</span>
       </div>
       <div className="coupon-list">
-        {items.map(it => {
+        {items.map((it) => {
           const remain = it.expireAt - Date.now();
           const hh = Math.max(0, Math.floor(remain / (1000 * 60 * 60)));
           const mm = Math.max(0, Math.floor((remain % (1000 * 60 * 60)) / (1000 * 60)));
@@ -467,7 +534,9 @@ function CouponBox({ items, onUse, onDelete }) {
             <div key={it.id} className={`coupon-card status-${it.status}`}>
               <div className="coupon-main">
                 <div className="coupon-title">{it.title}</div>
-                <div className="coupon-sub">{it.cafeName} • 코드 <b>{it.code}</b></div>
+                <div className="coupon-sub">
+                  {it.cafeName} • 코드 <b>{it.code}</b>
+                </div>
               </div>
               <div className="coupon-side">
                 {it.status === "issued" && remain > 0 && (
@@ -475,14 +544,16 @@ function CouponBox({ items, onUse, onDelete }) {
                     {hh}h {mm}m {ss}s
                   </div>
                 )}
-                {it.status !== "issued" && (
-                  <div className="chip">{it.status === "redeemed" ? "사용됨" : "만료"}</div>
-                )}
+                {it.status !== "issued" && <div className="chip">{it.status === "redeemed" ? "사용됨" : "만료"}</div>}
                 <div className="coupon-actions">
                   {it.status === "issued" && remain > 0 && (
-                    <Button size="sm" onClick={() => onUse(it.id)}>사용 완료</Button>
+                    <Button size="sm" onClick={() => onUse(it.id)}>
+                      사용 완료
+                    </Button>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => onDelete(it.id)}>삭제</Button>
+                  <Button size="sm" variant="outline" onClick={() => onDelete(it.id)}>
+                    삭제
+                  </Button>
                 </div>
               </div>
             </div>
@@ -491,4 +562,18 @@ function CouponBox({ items, onUse, onDelete }) {
       </div>
     </div>
   );
+}
+
+/* -------- 유틸: 안전 래퍼 -------- */
+function reclaimSafe(fn) {
+  // onClick에서 falsey guard를 붙이는 패턴을 함수형으로 래핑
+  return (...args) => {
+    try {
+      return fn(...args);
+    } catch (e) {
+      console.error(e);
+      alert("작업 중 오류가 발생했어요. 다시 시도해 주세요.");
+      return undefined;
+    }
+  };
 }

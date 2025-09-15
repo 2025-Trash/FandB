@@ -1,35 +1,76 @@
 // src/pages/SignUp.jsx
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Button from "../components/Button";
 import InputField from "../components/InputField";
 import "./SignUp.css";
 
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+
 export default function SignUp() {
-  const [name, setName] = useState("");
+  const [name, setName] = useState("");   // ← 표시용 이름(백엔드 first_name에 저장)
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  // 이메일 유효성 검사 정규식
-  const emailRegex =
-    /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const navigate = useNavigate();
+
+  const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   const isEmailValid = emailRegex.test(email);
   const isPwMatch = pw === pw2;
-  const isFormValid =
-    name.trim() && isEmailValid && pw && isPwMatch && termsAgreed;
+  const isFormValid = name.trim() && isEmailValid && pw && isPwMatch && termsAgreed;
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     if (!isFormValid) {
-      alert("모든 필드를 올바르게 입력하고 약관에 동의해주세요.");
+      setError("모든 필드를 올바르게 입력하고 약관에 동의해주세요.");
       return;
     }
-    const user = { name: name.trim(), email: email.trim(), points: 0, uses: 0 };
-    localStorage.setItem("demo_user", JSON.stringify(user));
-    window.location.href = "/validating";
+
+    setBusy(true);
+    try {
+      // email을 username으로 사용 + first_name에 이름 저장
+      const res = await fetch(`${API_BASE}/api/auth/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: email.trim(),    // 로그인용 아이디
+          email: email.trim(),
+          password: pw,
+          first_name: name.trim(),   // ← 이름 저장 포인트
+        }),
+      });
+
+      if (!res.ok) {
+        let msg = "회원가입에 실패했습니다.";
+        try {
+          const data = await res.json();
+          const firstKey = data && Object.keys(data)[0];
+          if (firstKey) {
+            const v = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
+            msg = `${firstKey}: ${v}`;
+          } else if (data?.detail) {
+            msg = data.detail;
+          }
+        } catch {}
+        throw new Error(msg);
+      }
+
+      // 성공 → 로그인 페이지로 이동 (이메일/이름을 state로 넘겨서 프리필/저장에 활용)
+      navigate("/login", {
+        replace: true,
+        state: { signupEmail: email.trim(), signupName: name.trim() },
+      });
+    } catch (err) {
+      setError(err.message || "알 수 없는 오류가 발생했습니다.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -89,36 +130,27 @@ export default function SignUp() {
               required
             />
             <span>
-              <a
-                href="/terms"
-                className="terms-link"
-                onClick={(e) => e.preventDefault()}
-              >
+              <a href="/terms" className="terms-link" onClick={(e) => e.preventDefault()}>
                 약관
               </a>{" "}
               및{" "}
-              <a
-                href="/privacy"
-                className="terms-link"
-                onClick={(e) => e.preventDefault()}
-              >
+              <a href="/privacy" className="terms-link" onClick={(e) => e.preventDefault()}>
                 개인정보 처리방침
               </a>
               에 동의합니다.
             </span>
           </label>
 
-          <Button type="submit" disabled={!isFormValid}>
-            가입하기
+          {error && <div className="signup-error" role="alert">{error}</div>}
+
+          <Button type="submit" disabled={!isFormValid || busy}>
+            {busy ? "가입 중..." : "가입하기"}
           </Button>
         </form>
 
-        {/* 로그인 유도 섹션 */}
         <div className="signin-prompt" role="note" aria-live="polite">
           이미 아이디가 있으신가요?{" "}
-          <Link to="/login" className="signin-link">
-            로그인하기
-          </Link>
+          <Link to="/login" className="signin-link">로그인하기</Link>
         </div>
       </main>
     </div>
