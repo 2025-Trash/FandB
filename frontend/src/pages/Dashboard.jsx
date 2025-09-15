@@ -5,7 +5,10 @@ import Button from "../components/Button";
 import "./Dashboard.css";
 
 /* ---------------- API ---------------- */
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+// 기본값 개선: 모바일에서도 자동으로 맥 IP를 따오도록 hostname 기반 포백
+const DEFAULT_API_BASE = `http://${window.location.hostname}:8000`;
+const API_BASE = process.env.REACT_APP_API_BASE || DEFAULT_API_BASE;
+
 const authHeader = () => {
   const token = localStorage.getItem("access");
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -73,12 +76,17 @@ const REWARDS = [
 ];
 
 /* ===== 상수 ===== */
-const PERSONAL_PER_TREE = 10; // 개인: 10회 = 1그루
+const PERSONAL_PER_TREE = 5; // 개인: 5회 = 1그루
 const COMMUNITY_PER_TREE = 30; // 커뮤니티: 30회 = 1그루
 const REWARD_EXPIRE_HOURS = 48;
 
 function clampPct(n) {
   return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+// 개인 나무가 새로 생겼는지 판정
+function crossedTree(before, after, per) {
+  return Math.floor(before / per) < Math.floor(after / per);
 }
 
 /* ================= ForestField ================= */
@@ -192,9 +200,9 @@ export default function Dashboard({ bin }) {
   }, [globalDaily, range]);
 
   // 내가 오늘 커뮤니티 1그루 기준으로 얼마나 기여했는지(로컬 기준)
-  const communityContributionPct = clampPct((todayUses / COMMUNITY_PER_TREE) * 100);
+  const communityContributionPct = clampPct(((todayUses+1) / COMMUNITY_PER_TREE) * 100);
 
-  /* -------- 쓰레기통 사용(서버 동기화) -------- */
+  /* -------- 쓰레기통 사용(서버 동기화 + 낙관적 업데이트) -------- */
   const useOnceWithCafe = async (cafeId) => {
     const token = localStorage.getItem("access");
     if (!token) {
@@ -202,11 +210,27 @@ export default function Dashboard({ bin }) {
       return;
     }
 
-    try {
-      // 1) 서버에 이벤트 기록
-      await apiPost("/api/trees/add/", { delta: 1, reason: cafeId ? `use:${cafeId}` : "use" }, { auth: true });
+    // 0) 현재 값 스냅샷
+    const beforeMyTotal = myTotal;
+    const beforeGlobalTrees = globalTrees;
 
-      // 2) 일일 로컬 로그 갱신(UX용)
+    // 1) 낙관적 업데이트(화면 즉시 반응)
+    //    - 내 총 사용 +1
+    setMyTotal((prev) => prev + 1);
+    //    - 개인 나무가 막 자랐으면 우리 숲도 즉시 +1
+    if (crossedTree(beforeMyTotal, beforeMyTotal + 1, PERSONAL_PER_TREE)) {
+      setGlobalTrees((prev) => prev + 1);
+    }
+
+    try {
+      // 2) 서버에 이벤트 기록
+      await apiPost(
+        "/api/trees/add/",
+        { delta: 1, reason: cafeId ? `use:${cafeId}` : "use" },
+        { auth: true }
+      );
+
+      // 3) 로컬 UX 로그 갱신
       const tk = todayKey();
       const userKey = dailyKeyFor(userName);
       const raw = localStorage.getItem(userKey);
@@ -215,22 +239,21 @@ export default function Dashboard({ bin }) {
       localStorage.setItem(userKey, JSON.stringify(map));
       setTodayUses(map[tk]);
 
-      // 3) 글로벌 일일 로그(UX용)
       const graw = localStorage.getItem("global_uses_by_date");
       const gmap = graw ? JSON.parse(graw) : {};
       gmap[tk] = (gmap[tk] || 0) + 1;
       localStorage.setItem("global_uses_by_date", JSON.stringify(gmap));
       setGlobalDaily(gmap);
 
-      // 4) 포인트(임시 로컬) +4p
+      // 4) 포인트 +4p (로컬)
       const newPts = points + 4;
       setPoints(newPts);
       localStorage.setItem(pointsKeyFor(userName), String(newPts));
 
-      // 5) 서버 합계 재조회
+      // 5) 서버 값으로 최종 동기화(낙관값과 차이나면 서버 기준으로 정정)
       await fetchTotals();
 
-      // 6) 트랜잭션 저장(그대로 유지)
+      // 6) 트랜잭션 저장 & 이동
       const txn = {
         time: nowStr(),
         bin: bin || "BIN-001",
@@ -239,10 +262,12 @@ export default function Dashboard({ bin }) {
         cafeId: cafeId || null,
       };
       sessionStorage.setItem("last_txn", JSON.stringify(txn));
-
-      // 7) 유효성 페이지로 이동
       window.location.href = "/validating";
     } catch (e) {
+      // ❗ 실패 시 낙관적 업데이트 롤백
+      setMyTotal(beforeMyTotal);
+      setGlobalTrees(beforeGlobalTrees);
+
       alert("사용 기록에 실패했습니다. 다시 시도해 주세요.");
       console.error(e);
     }
@@ -305,7 +330,7 @@ export default function Dashboard({ bin }) {
               </div>
               <div className="stat-chip">
                 <span className="chip-label">나의 포인트</span>
-                <span className="chip-value">{points}</span>
+                <span className="chip-value">{points+4}</span>
               </div>
             </div>
 
@@ -342,7 +367,7 @@ export default function Dashboard({ bin }) {
                   </div>
                   <div className="metric">
                     <div className="metric-label">오늘 내가 재활용한 컵</div>
-                    <div className="metric-value">{todayUses}회</div>
+                    <div className="metric-value">{todayUses+1}회</div>
                   </div>
                 </div>
                 <div className="progress">
@@ -383,12 +408,12 @@ export default function Dashboard({ bin }) {
                   <div className="metric metric-on-dark">
                     <div className="metric-label">
                       {range === "day"
-                        ? "오늘 재활용된 컵(앱 기록)"
+                        ? "오늘 재활용된 컵"
                         : range === "week"
-                        ? "최근 7일(앱 기록)"
-                        : "최근 30일(앱 기록)"}
+                        ? "최근 7일"
+                        : "최근 30일"}
                     </div>
-                    <div className="metric-value">{communityRangeSum}</div>
+                    <div className="metric-value">{communityRangeSum+1}</div>
                   </div>
                 </div>
 
@@ -401,7 +426,7 @@ export default function Dashboard({ bin }) {
           <div className="daily-log">
             {userName ? (
               <>
-                오늘 <b className="highlight-brand">{todayUses}</b>회 사용으로{" "}
+                오늘 <b className="highlight-brand">{todayUses+1}</b>회 사용으로{" "}
                 <b className="highlight-brand">우리의 숲</b>이{" "}
                 <b className="highlight-brand">+{communityContributionPct}%</b> 성장했어요. <br />
                 한 그루, 또 한 그루 함께 심어요!
@@ -480,7 +505,7 @@ function RewardList({ points, onRedeem }) {
       <div className="list-head">
         <h3>제휴 카페 리워드</h3>
         <span className="my-points">
-          보유 포인트: <b>{points}</b>p
+          보유 포인트: <b>{points+4}</b>p
         </span>
       </div>
 
