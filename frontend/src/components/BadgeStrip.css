@@ -1,0 +1,12 @@
+.bdg-strip { background:#fff; border-radius:16px; padding:12px 16px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
+.bdg-title { font-size:14px; color:#737B7D; font-weight:700; margin-bottom:8px; }
+.bdg-list { display:flex; gap:10px; flex-wrap:wrap; }
+
+.bdg {
+  display:flex; align-items:center; gap:6px;
+  padding:8px 10px; border-radius:12px; border:1px dashed #E6E8EA; color:#8B8E91;
+  background:#FAFAFB;
+}
+.bdg--on { border:1px solid #E6F8EC; color:#2F7D32; background:#F3FFF6; }
+.bdg-medal { font-size:16px; }
+.bdg-text { font-size:13px; font-weight:700; }

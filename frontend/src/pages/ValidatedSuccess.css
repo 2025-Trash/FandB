@@ -1,0 +1,181 @@
+/*
+ * 전역 변수 설정 (공통 색상, 크기 등)
+ * 유지보수를 위해 변수화
+ */
+:root {
+  --color-brand-green: #4caf50;
+  --color-brand-strong: #2e7d32;
+  --color-bg-light: #e8f5e9;
+  --color-text-sub: #757575;
+
+  --icon-size-large: 160px;
+  --icon-size-medium: 132px;
+  --icon-size-small: 116px;
+}
+
+/* 애니메이션: 아이콘 나타나기 */
+@keyframes fade-in-scale {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 메인 레이아웃 */
+.success-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.success-main {
+  flex: 1;
+  max-width: 768px;
+  padding: 20px 16px;
+  margin: 0 auto 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 체크마크 아이콘 컨테이너 */
+.success-icon-wrapper {
+  width: var(--icon-size-large);
+  height: var(--icon-size-large);
+  position: relative;
+  margin: 24px auto 0;
+}
+
+/* 실제 아이콘 */
+.success-icon {
+  width: 120px;
+  height: 120px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background-color: var(--color-brand-green);
+  color: #fff;
+  font-size: 64px;
+  font-weight: 900;
+  line-height: 120px;
+  text-align: center;
+  z-index: 10;
+  /* animation: fade-in-scale 0.5s ease-out; */
+  will-change: transform, opacity;
+}
+
+/* 텍스트 */
+.success-heading {
+  text-align: center;
+  color: var(--color-brand-green);
+  font-size: 32px;
+  font-weight: 900;
+  margin-top: 24px;
+}
+
+.success-message {
+  text-align: center;
+  color: var(--color-text-sub);
+  margin-top: 8px;
+}
+
+/* 버튼 */
+.success-cta-buttons {
+  max-width: 360px;
+  margin: 32px auto 0;
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+/* 모션 민감 사용자 배려 */
+@media (prefers-reduced-motion: reduce) {
+  .success-icon {
+    animation: none !important;
+  }
+}
+
+/* ====== ≤480px (모바일) ====== */
+@media (max-width: 480px) {
+  .success-main {
+    margin: 0 auto 48px;
+  }
+
+  .success-icon-wrapper {
+    width: var(--icon-size-medium);
+    height: var(--icon-size-medium);
+    margin-top: 12px;
+  }
+
+  .success-icon {
+    width: 100px;
+    height: 100px;
+    line-height: 100px;
+    font-size: 52px;
+  }
+
+  .success-heading {
+    font-size: 26px;
+    margin-top: 16px;
+  }
+
+  .success-message {
+    font-size: 14px;
+    line-height: 1.5;
+    margin-top: 6px;
+    padding: 0 6px;
+  }
+
+  .success-cta-buttons {
+    max-width: 100%;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .success-cta-buttons > * {
+    min-height: 44px;
+  }
+}
+
+/* ====== ≤360px (소형 기기) ====== */
+@media (max-width: 360px) {
+  .success-icon-wrapper {
+    width: var(--icon-size-small);
+    height: var(--icon-size-small);
+  }
+
+  .success-icon {
+    width: 88px;
+    height: 88px;
+    line-height: 88px;
+    font-size: 44px;
+  }
+
+  .success-heading {
+    font-size: 22px;
+  }
+
+  .success-message {
+    font-size: 13px;
+  }
+
+  .success-cta-buttons {
+    gap: 8px;
+    margin-top: 20px;
+  }
+}
+
+/* ====== 넓은 화면(태블릿 이상)에서 살짝 여유 ====== */
+@media (min-width: 769px) {
+  .success-main {
+    padding: 24px;
+  }
+
+  .success-cta-buttons {
+    max-width: 420px;
+  }
+}

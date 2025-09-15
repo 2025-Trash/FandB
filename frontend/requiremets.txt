@@ -1,0 +1,5 @@
+npm i -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+
+# 라우터/모션이 없다면 설치
+npm i react-router-dom framer-motion

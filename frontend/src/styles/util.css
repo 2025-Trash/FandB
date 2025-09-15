@@ -1,0 +1,68 @@
+/* src/styles/util.css */
+
+/* ===== Button (일관 디자인) ===== */
+.btn {
+  /* 기본 버튼/링크 스타일 제거(가장 중요) */
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  min-height: var(--btn-h-md);
+  padding: 0 var(--btn-px);
+  width: auto;
+  border-radius: var(--radius-pill);
+  font-weight: 800; letter-spacing: .01em;
+  cursor: pointer; user-select: none;
+  text-decoration: none; /* a 태그일 때 밑줄 방지 */
+  transition: transform .18s ease, filter .18s ease, box-shadow .18s ease, background-color .18s ease, opacity .18s ease;
+  will-change: transform, box-shadow;
+}
+
+/* 크기 */
+.btn--sm { min-height: var(--btn-h-sm); font-size: 0.95rem; }
+.btn--md { min-height: var(--btn-h-md); font-size: 1rem; }
+.btn--lg { min-height: var(--btn-h-lg); font-size: 1.05rem; }
+
+/* 전체폭 */
+.btn--block { width: 100%; }
+
+/* Primary */
+.btn--primary {
+  color: #fff;
+  background: var(--brand-gradient);
+  box-shadow: var(--shadow-elev-soft);
+}
+/* Hover/Active/Disabled */
+.btn--primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-elev); filter: brightness(0.98); }
+.btn--primary:active { transform: translateY(0) scale(0.98); filter: brightness(0.96); }
+.btn--primary:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Outline */
+.btn--outline {
+  background: #fff;
+  color: var(--color-brand-700);
+  border: 2px solid var(--color-brand);
+  box-shadow: var(--shadow-elev-soft);
+}
+.btn--outline:hover { background: rgba(45,204,112,.08); transform: translateY(-1px); }
+.btn--outline:active { transform: translateY(0) scale(0.99); }
+.btn--outline:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* 포커스 공통 */
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus-ring), var(--shadow-elev-soft); }
+
+/* 로딩 스피너 */
+.btn__spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.55);
+  border-top-color: #fff;
+  animation: spin .8s linear infinite;
+}
+.btn--outline .btn__spinner {
+  border: 2px solid rgba(45,204,112,.3);
+  border-top-color: var(--color-brand);
+}
+@keyframes spin { to { transform: rotate(360deg); } }

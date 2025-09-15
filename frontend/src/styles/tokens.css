@@ -1,0 +1,32 @@
+:root{
+  /* 브랜드 */
+  --color-brand: #2DCC70;
+  --color-brand-strong: #2FB74D;
+  --color-brand-700: #239a54;
+  --color-brand-weak: #80D48F;
+  --brand-gradient: linear-gradient(90deg, #66bb6a 0%, #43a047 100%);
+
+  /* 텍스트/배경/라인 */
+  --color-text: #1F2024;
+  --color-sub: #71727A;
+  --color-line: #E5E7EB;
+  --color-white: #ffffff;
+  --color-bg: #F4F5F9;
+
+  /* 상태/포커스/그림자/모양 */
+  --focus-ring: rgba(45, 204, 112, 0.28);
+  --shadow-elev: 0 6px 18px rgba(45, 204, 112, 0.25);
+  --shadow-elev-soft: 0 4px 12px rgba(0,0,0,.08);
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  --container-max: 768px;
+  --container-px: 16px;
+
+  /* 버튼 높이/패딩 */
+  --btn-h-sm: 40px;
+  --btn-h-md: 48px;
+  --btn-h-lg: 56px;
+  --btn-px: 18px;
+}

@@ -1,0 +1,120 @@
+/* 전역 토큰/유틸 먼저 로드 */
+@import url("./styles/tokens.css");
+@import url("./styles/util.css");
+
+/* ===== Webfonts ===== */
+/* Pretendard Variable (공식 CDN) */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/pretendard/1.3.9/variable/PretendardVariable-VF.css");
+
+/* Gmarket Sans (Light/Medium/Bold) - Noonnu CDN */
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansLight.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Font Tokens ===== */
+:root {
+  --font-body: 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+  --font-heading: 'GmarketSans', 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+/* ===== Global Reset / Base ===== */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+html {
+  /* 라이트만 사용하면 색상 계산이 안정적 */
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body); /* 본문 = Pretendard Variable */
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Heading: 제목/소제목은 Gmarket Sans */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  line-height: 1.3;
+  margin: 0 0 0.5em;
+}
+
+/* 기본 크기/굵기 스케일(필요시 조정) */
+h1 { font-size: 2rem;   font-weight: 700; } /* Bold */
+h2 { font-size: 1.5rem; font-weight: 500; } /* Medium */
+h3 { font-size: 1.25rem; font-weight: 500; }
+h4 { font-size: 1.125rem; font-weight: 500; }
+h5 { font-size: 1rem;   font-weight: 500; }
+h6 { font-size: .875rem; font-weight: 500; }
+
+/* 본문 계열은 Pretendard 유지 */
+p, li, small, span { font-family: var(--font-body); }
+
+/* 미디어/인라인 요소 기본 */
+img, svg, video { display: block; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+
+/* 폼 요소: 폰트 상속 + 기본 외형 제거(컴포넌트 CSS가 스타일링) */
+button, input, select, textarea { font: inherit; }
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* 전역 포커스는 기본만: 컴포넌트별(.btn, .input 등)에서 더 선명하게 지정 */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  /* 전역 box-shadow 제거 → util.css의 .btn:focus-visible, .input:focus 사용 */
+  box-shadow: none;
+  border-radius: 6px;
+}
+
+/* 모션 최소화 지원 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===== Utilities (선택) ===== */
+.font-gmarket { font-family: var(--font-heading); }     /* 수동으로 Gmarket 적용 */
+.font-pretendard { font-family: var(--font-body); }     /* 수동으로 Pretendard 적용 */

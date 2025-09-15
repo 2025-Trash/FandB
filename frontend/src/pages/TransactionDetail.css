@@ -1,0 +1,104 @@
+/* src/pages/TransactionDetail.css */
+
+/* 전체 레이아웃 */
+.transaction-main {
+  max-width: 768px;
+  padding: 16px;
+  margin: 0 auto 64px;
+}
+
+/* 거래 성공 헤더 섹션 */
+.success-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.success-icon-container {
+  width: 100px;
+  height: 100px;
+  background-color: rgba(76, 175, 80, 0.1);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 16px;
+}
+
+.success-icon {
+  font-size: 50px;
+  color: #4CAF50;
+  font-weight: 900;
+  display: block;
+}
+
+.success-heading {
+  font-size: 28px;
+  font-weight: 900;
+  color: #4CAF50;
+  margin: 0;
+}
+
+.success-message {
+  font-size: 14px;
+  color: #757575;
+  margin: 8px 0;
+}
+
+.points-gained {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4CAF50;
+  margin-top: 16px;
+}
+
+/* 정보 카드 공통 스타일 */
+.info-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  margin-top: 24px;
+}
+
+.card-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Row 컴포넌트 스타일 */
+.user-info-row,
+.transaction-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.user-info-row:last-child,
+.transaction-row:last-child {
+  border-bottom: none;
+}
+
+.user-info-label,
+.transaction-label {
+  color: #737B7D;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.user-info-value,
+.transaction-value {
+  color: #737B7D;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* 공유 버튼 컨테이너 */
+.share-btn-container {
+  margin-top: 24px;
+}

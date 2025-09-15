@@ -1,0 +1,131 @@
+/*
+* 애니메이션: 로딩 스피너
+*/
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/*
+* 애니메이션: Fun Fact 카드 나타나기
+*/
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 전체 컨테이너 */
+.validating-container {
+  min-height: 100vh;
+  background-color: #fff;
+}
+
+/* 메인 콘텐츠 */
+.validating-main {
+  max-width: 768px;
+  padding: 16px;
+  margin: 0 auto 64px;
+}
+
+/* 헤딩과 메시지 */
+.validating-heading {
+  text-align: center;
+  color: var(--color-brand);
+  font-size: 24px;
+  font-weight: 900;
+  margin: 0;
+}
+.validating-message {
+  text-align: center;
+  color: var(--color-sub);
+  margin-top: 8px;
+}
+
+/* 로딩 스피너 */
+.loader-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 40px;
+  animation: slide-up 0.5s ease-out;
+}
+.loader {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 4px solid rgba(144, 215, 114, 0.1);
+  border-top-color: #28B446;
+  animation: spin 1.4s linear infinite;
+}
+
+/* Fun Fact 카드 */
+.fun-fact-card {
+  text-align: center;
+  margin-top: 40px;
+  padding: 16px;
+  animation: slide-up 0.5s ease-out 0.2s forwards;
+  opacity: 0;
+}
+.fun-fact-title {
+  font-size: 14px;
+  color: var(--color-brand);
+  font-weight: 700;
+  margin: 0;
+}
+.fun-fact-text {
+  font-size: 14px;
+  color: var(--color-text-sub);
+  margin-top: 8px;
+}
+.fun-fact-source {
+  font-size: 12px;
+  color: var(--color-text-sub);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* 뉴스 링크 카드 */
+.news-link-card {
+  display: flex;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin-top: 40px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease;
+  animation: slide-up 0.5s ease-out 0.4s forwards;
+  opacity: 0;
+}
+.news-link-card:hover {
+  transform: translateY(-5px);
+}
+.news-thumbnail {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+.news-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.news-content {
+  padding: 12px;
+}
+.news-category {
+  font-size: 12px;
+  color: #757575;
+  margin: 0;
+}
+.news-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+.news-source {
+  font-size: 11px;
+  color: #9e9e9e;
+  margin-top: 4px;
+}
