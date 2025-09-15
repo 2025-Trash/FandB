@@ -1,18 +1,10 @@
-Here's the `README.md` file formatted for direct copy and paste into GitHub. It's the same content you provided, structured with appropriate headings, code blocks, and formatting.
-
-````markdown
-# FandB (Frontend + Backend Monorepo)
-
-React 프론트엔드와 Django 백엔드를 통합 관리하는 저장소입니다.
-
----
-
 ## 📂 프로젝트 구조
 
 ```bash
 /backend      # Django + Django REST Framework
 /frontend     # React (Create React App 기반)
 ```
+
 ````
 
 ---
@@ -62,7 +54,7 @@ python manage.py createsuperuser
 INSTALLED_APPS += ["corsheaders", "rest_framework"]
 MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", *MIDDLEWARE]
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*"]s
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
 CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
 CORS_ALLOW_CREDENTIALS = True
@@ -99,37 +91,4 @@ npm start
 ```
 
 브라우저에서 `http://localhost:3000` 접속 후 확인합니다.
-
----
-
-## 🚑 Trouble Shooting
-
-- **Failed to fetch**
-
-  - 백엔드 서버 실행 여부 확인 (`runserver`)
-  - `.env.local`에 API 주소 올바른지 확인
-  - CORS/CSRF 설정 누락 여부 확인
-
-- **403 CSRF**
-
-  - `settings.py` → `CSRF_TRUSTED_ORIGINS` 설정 확인
-  - 프론트 fetch 요청에 `credentials: 'include'` 추가
-
----
-
-## 📌 배포 계획 (추가 예정)
-
-- Backend: Django + Gunicorn + Nginx
-- Frontend: Static build (`npm run build`) + Nginx
-
----
-
-## 🏷️ 버전 태그
-
-- v1: 첫 통합 버전 (frontend + backend)
-
-<!-- end list -->
-
-```
-
-```
+````
